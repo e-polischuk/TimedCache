@@ -10,8 +10,8 @@ import java.util.function.Function;
 /**
  * Use case example of the cache api. In real conditions can be used any type as a cached value (here it's LocalDateTime)
  * and any type which properly implements hashCode() and equals() to be used as key (here it's Integer).
- * Also expected the key is input parameter of valueFetcher function - function valueFetcher has to represent a method,
- * which return updated value by input parameter key.
+ * Also expected the key is an input parameter of getUpdatedValue function - function getUpdatedValue has to represent
+ * a method, which return the updated value by the input parameter - key.
  */
 public class CacheProvider {
     private static volatile Cache<Integer, LocalDateTime> cache;
@@ -26,13 +26,17 @@ public class CacheProvider {
         isCacheHolder = isHolder;
     }
 
-    public static LocalDateTime of(Integer key, Function<Integer, LocalDateTime> valueFetcher) {
+    public static boolean isHolder() {
+        return isCacheHolder;
+    }
+
+    public static LocalDateTime of(Integer key, Function<Integer, LocalDateTime> getUpdatedValue) {
         Class<? extends Cache> required = isCacheHolder ? CacheHolder.class : CacheCleaner.class;
         if (cache == null || cache.getClass() !=  required) {
             if (cache != null) cache.stopCache();
             cache = isCacheHolder ? CacheHolder.get(CacheProvider.class) : CacheCleaner.get(CacheProvider.class);
         }
-        return cache.of(key, cacheTime, valueFetcher);
+        return cache.of(key, cacheTime, getUpdatedValue);
     }
 
 }

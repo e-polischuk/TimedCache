@@ -4,7 +4,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
-public class CacheHolder<K, V>  extends Cache<K, V> {
+public class CacheHolder<K, V>  extends CacheAbstract<K, V> {
     private static final Map<Class, CacheHolder> HOLDERS = new ConcurrentHashMap<>();
     private final Thread holder;
 
@@ -30,12 +30,12 @@ public class CacheHolder<K, V>  extends Cache<K, V> {
     }
 
     @Override
-    public synchronized V of(K key, int time, Function<K, V> valueFetcher) {
+    public synchronized V of(K key, int time, Function<K, V> getUpdatedValue) {
         setTime(time);
         CacheHolder<K, V> removed = (CacheHolder<K, V>) store.remove(key);
         if (removed != null && removed.holder != null && removed.holder.isAlive()) removed.holder.interrupt();
         V preVal = removed == null ? null : removed.getValue();
-        V actualVal = preVal == null ? valueFetcher.apply(key) : preVal;
+        V actualVal = preVal == null ? getUpdatedValue.apply(key) : preVal;
         CacheHolder<K, V> actual = new CacheHolder<>(user, store, actualVal, time);
         store.put(key, actual);
         actual.holder.setName(key.toString());
@@ -45,7 +45,7 @@ public class CacheHolder<K, V>  extends Cache<K, V> {
     }
 
     @Override
-    public synchronized Cache<K, V> stopCache() {
+    public synchronized void stopCache() {
         store.values().forEach(storedCache -> {
             try {
                 CacheHolder<K, V> cache = (CacheHolder<K, V>) storedCache;
@@ -54,8 +54,7 @@ public class CacheHolder<K, V>  extends Cache<K, V> {
                 LOG.error("Interrupt CacheThread error -> ", e);
             }
         });
-        store.clear();
-        return HOLDERS.remove(user);
+        HOLDERS.remove(user).store.clear();
     }
 
 }
