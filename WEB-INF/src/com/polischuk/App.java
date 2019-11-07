@@ -37,6 +37,8 @@ public class App {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+            CacheProvider.setCacheTime((int) (timeLimit * Math.random() + 1));
+            CacheProvider.of(i, k -> LocalDateTime.now());
         }
         CacheProvider.setHolder(!CacheProvider.isHolder());
     }

@@ -14,7 +14,7 @@ public class CacheHolder<K, V>  extends CacheAbstract<K, V> {
            String keyName = Thread.currentThread().getName();
            try {
                LOG.info("CacheHolder STARTED to hold -> " + keyName);
-               Thread.sleep(sleepTimeOf(time[0]));
+               pauseFor(this::getTime);
            } catch (InterruptedException e) {
                LOG.error("CacheHolder Key Reference error -> ", e);
            } finally {
@@ -42,7 +42,7 @@ public class CacheHolder<K, V>  extends CacheAbstract<K, V> {
             actual.holder.setName(key.toString());
             actual.holder.setDaemon(true);
             actual.holder.start();
-        }
+        } else current.setTime(time);
         return currentVal;
     }
 

@@ -26,9 +26,9 @@ public class CacheCleaner<K, V> extends CacheAbstract<K, V> {
         if (currentVal == null) {
             currentVal = getUpdatedValue.apply(key);
             store.put(key, new CacheCleaner<>(user, store, currentVal, time));
-            setTime(getMinTimeOf(store));
-            setCleaner();
-        }
+            this.setTime(getMinTimeOf(store));
+            this.setCleaner();
+        } else current.setTime(time);
         return currentVal;
     }
 
@@ -50,16 +50,7 @@ public class CacheCleaner<K, V> extends CacheAbstract<K, V> {
             cleaner = new Thread(() -> {
                 LOG.info(">>> STARTED " + Thread.currentThread().getName());
                 do try {
-                    int minTime = getMinTimeOf(CLEANED);
-                    LOG.info(">>> DaemonCacheCleaner fell asleep for " + minTime + " sec");
-                    int slept = 0;
-                    while (minTime > slept) {
-                        int seconds = minTime > 60 ? 60 : minTime;
-                        Thread.sleep(sleepTimeOf(seconds));
-                        slept += seconds;
-                        minTime = getMinTimeOf(CLEANED);
-                    }
-                    LOG.info(">>> DaemonCacheCleaner woke up after overslept " + slept + " sec:");
+                    pauseFor(() -> getMinTimeOf(CLEANED));
                     LocalDateTime now = LocalDateTime.now();
                     CLEANED.forEach((u, cached) -> {
                         LOG.info(u.getName() + " -> Before clean StoreSize=" + cached.store.size() + " at " + now);

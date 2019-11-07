@@ -34,7 +34,8 @@ public class Logger {
 
     public void error(String errorMsg, Throwable throwable) {
         error(errorMsg);
-        throwable.printStackTrace();
+        System.out.println(throwable.getClass().getName() + ": " + throwable.getMessage());
+        for (StackTraceElement e : throwable.getStackTrace()) System.out.println("   > " + e);
     }
 
     private void printMsg(String type, String msg) {

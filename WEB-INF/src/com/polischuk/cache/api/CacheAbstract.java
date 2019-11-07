@@ -5,6 +5,7 @@ import com.polischuk.util.Logger;
 import java.lang.ref.SoftReference;
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.function.IntSupplier;
 
 public abstract class CacheAbstract<K, V> implements Cache<K, V> {
     static final Logger LOG = Logger.getLogger(Cache.class);
@@ -35,8 +36,18 @@ public abstract class CacheAbstract<K, V> implements Cache<K, V> {
         return valueRef == null ? null : valueRef.get();
     }
 
-    int sleepTimeOf(int seconds) {
-        return seconds < 1 ? 1000 : 1000 * seconds;
+    void pauseFor(IntSupplier getActualTime) throws InterruptedException {
+        String threadName = Thread.currentThread().getName();
+        int actualTime = getActualTime.getAsInt();
+        LOG.info(">>> " + threadName + " fell asleep for " + actualTime + " sec");
+        int slept = 0;
+        while (actualTime > slept) {
+            int seconds = actualTime > 60 ? 60 : actualTime;
+            Thread.sleep(seconds < 1 ? 1000 : 1000 * seconds);
+            slept += seconds;
+            actualTime = getActualTime.getAsInt();
+        }
+        LOG.info(">>> " + threadName + " woke up after overslept " + slept + " sec:");
     }
 
     @Override
