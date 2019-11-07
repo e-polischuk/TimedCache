@@ -14,8 +14,8 @@ public class App {
             for (int i = 5; i < 11; i = i + 5) {
                 String cacheType = CacheProvider.isHolder() ? "HOLDER" : "CLEANER";
                 System.out.println("======================== " + cacheType + " (time = " + i + " s) ========================");
-                CacheProvider.setCacheTime(i);
-                test();
+                //CacheProvider.setCacheTime(i);
+                test(10);
                 System.out.println("=====>>>> " + cacheType + " is closed......");
                 CacheProvider.setCacheTime(0);
                 CacheProvider.of(0, k -> LocalDateTime.now());
@@ -26,8 +26,9 @@ public class App {
         }
     }
 
-    private synchronized static void test() {
+    private synchronized static void test(int timeLimit) {
         for (int i = 1; i < 10; i++) {
+            CacheProvider.setCacheTime((int) (timeLimit * Math.random() + 1));
             CacheProvider.of(i, k -> LocalDateTime.now());
             try {
                 int sleepTime = 1000 * i * 3 / 4;

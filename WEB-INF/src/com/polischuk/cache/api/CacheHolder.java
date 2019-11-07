@@ -14,7 +14,7 @@ public class CacheHolder<K, V>  extends CacheAbstract<K, V> {
            String keyName = Thread.currentThread().getName();
            try {
                LOG.info("CacheHolder STARTED to hold -> " + keyName);
-               Thread.sleep(sleepTimeOf(getTime()));
+               Thread.sleep(sleepTimeOf(time[0]));
            } catch (InterruptedException e) {
                LOG.error("CacheHolder Key Reference error -> ", e);
            } finally {
@@ -31,17 +31,19 @@ public class CacheHolder<K, V>  extends CacheAbstract<K, V> {
 
     @Override
     public synchronized V of(K key, int time, Function<K, V> getUpdatedValue) {
+        if (time < 1) return getUpdatedValue.apply(key);
         setTime(time);
-        CacheHolder<K, V> removed = (CacheHolder<K, V>) store.remove(key);
-        if (removed != null && removed.holder != null && removed.holder.isAlive()) removed.holder.interrupt();
-        V preVal = removed == null ? null : removed.getValue();
-        V actualVal = preVal == null ? getUpdatedValue.apply(key) : preVal;
-        CacheHolder<K, V> actual = new CacheHolder<>(user, store, actualVal, time);
-        store.put(key, actual);
-        actual.holder.setName(key.toString());
-        actual.holder.setDaemon(true);
-        actual.holder.start();
-        return actualVal;
+        CacheHolder<K, V> current = (CacheHolder<K, V>) store.get(key);
+        V currentVal = current == null ? null : current.getValue();
+        if (currentVal == null) {
+            currentVal = getUpdatedValue.apply(key);
+            CacheHolder<K, V> actual = new CacheHolder<>(user, store, currentVal, time);
+            store.put(key, actual);
+            actual.holder.setName(key.toString());
+            actual.holder.setDaemon(true);
+            actual.holder.start();
+        }
+        return currentVal;
     }
 
     @Override

@@ -19,7 +19,7 @@ public abstract class CacheAbstract<K, V> implements Cache<K, V> {
         this.user = user;
         this.store = store;
         this.valueRef = value == null ? null : new SoftReference<>(value);
-        this.time = time.length < 1 || time[0] < 1 ? 1 : time[0];
+        this.time = time.length < 1 ? 1 : time[0];
     }
 
     void setTime(int time) {
@@ -36,7 +36,7 @@ public abstract class CacheAbstract<K, V> implements Cache<K, V> {
     }
 
     int sleepTimeOf(int seconds) {
-        return 1000 * seconds; //1000 * Math.max(5, Math.min(seconds, 3600));
+        return seconds < 1 ? 1000 : 1000 * seconds;
     }
 
     @Override

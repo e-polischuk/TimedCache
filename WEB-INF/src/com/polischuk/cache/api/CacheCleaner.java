@@ -20,13 +20,16 @@ public class CacheCleaner<K, V> extends CacheAbstract<K, V> {
 
     @Override
     public synchronized V of(K key, int time, Function<K, V> getUpdatedValue) {
-        CacheCleaner<K, V> removed = (CacheCleaner<K, V>) store.remove(key);
-        V preVal = removed == null ? null : removed.getValue();
-        V actualVal = preVal == null ? getUpdatedValue.apply(key) : preVal;
-        store.put(key, new CacheCleaner<>(user, store, actualVal, time));
-        setTime(getMinTimeOf(store));
-        setCleaner();
-        return actualVal;
+        if (time < 1) return getUpdatedValue.apply(key);
+        CacheCleaner<K, V> current = (CacheCleaner<K, V>) store.get(key);
+        V currentVal = current == null ? null : current.getValue();
+        if (currentVal == null) {
+            currentVal = getUpdatedValue.apply(key);
+            store.put(key, new CacheCleaner<>(user, store, currentVal, time));
+            setTime(getMinTimeOf(store));
+            setCleaner();
+        }
+        return currentVal;
     }
 
     @Override
@@ -49,8 +52,14 @@ public class CacheCleaner<K, V> extends CacheAbstract<K, V> {
                 do try {
                     int minTime = getMinTimeOf(CLEANED);
                     LOG.info(">>> DaemonCacheCleaner fell asleep for " + minTime + " sec");
-                    Thread.sleep(sleepTimeOf(minTime));
-                    LOG.info(">>> DaemonCacheCleaner woke up after overslept " + minTime + " sec:");
+                    int slept = 0;
+                    while (minTime > slept) {
+                        int seconds = minTime > 60 ? 60 : minTime;
+                        Thread.sleep(sleepTimeOf(seconds));
+                        slept += seconds;
+                        minTime = getMinTimeOf(CLEANED);
+                    }
+                    LOG.info(">>> DaemonCacheCleaner woke up after overslept " + slept + " sec:");
                     LocalDateTime now = LocalDateTime.now();
                     CLEANED.forEach((u, cached) -> {
                         LOG.info(u.getName() + " -> Before clean StoreSize=" + cached.store.size() + " at " + now);
@@ -77,7 +86,7 @@ public class CacheCleaner<K, V> extends CacheAbstract<K, V> {
 
     private synchronized int getMinTimeOf(Map caches) {
         //noinspection unchecked
-        return caches.values().stream().mapToInt(c -> ((CacheCleaner)c).getTime()).min().orElse(0);
+        return caches.isEmpty() ? 10 : caches.values().stream().mapToInt(c -> ((CacheCleaner)c).getTime()).min().orElse(10);
     }
 
 }
