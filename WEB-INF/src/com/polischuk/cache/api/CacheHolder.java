@@ -25,25 +25,30 @@ public class CacheHolder<K, V>  extends CacheAbstract<K, V> {
         });
     }
 
-    public synchronized static CacheHolder get(Class user) {
+    public synchronized static CacheHolder of(Class user) {
         return HOLDERS.computeIfAbsent(user, u -> new CacheHolder<>(u, new ConcurrentHashMap<>(), null));
     }
 
     @Override
-    public synchronized V of(K key, int time, Function<K, V> getUpdatedValue) {
-        if (time < 1) return getUpdatedValue.apply(key);
-        setTime(time);
-        CacheHolder<K, V> current = (CacheHolder<K, V>) store.get(key);
-        V currentVal = current == null ? null : current.getValue();
-        if (currentVal == null) {
-            currentVal = getUpdatedValue.apply(key);
-            CacheHolder<K, V> actual = new CacheHolder<>(user, store, currentVal, time);
-            store.put(key, actual);
-            actual.holder.setName(key.toString());
-            actual.holder.setDaemon(true);
-            actual.holder.start();
-        } else current.setTime(time);
-        return currentVal;
+    public synchronized V get(K key, int time, Function<K, V> getUpdatedValue) {
+        if (time < 1) {
+            CacheHolder<K, V> removed = (CacheHolder<K, V>) store.remove(key);
+            if (removed != null && removed.holder != null && removed.holder.isAlive()) removed.holder.interrupt();
+            return getUpdatedValue.apply(key);
+        } else {
+            setTime(time);
+            CacheHolder<K, V> current = (CacheHolder<K, V>) store.get(key);
+            V currentVal = current == null ? null : current.getValue();
+            if (currentVal == null) {
+                currentVal = getUpdatedValue.apply(key);
+                CacheHolder<K, V> actual = new CacheHolder<>(user, store, currentVal, time);
+                store.put(key, actual);
+                actual.holder.setName(key.toString());
+                actual.holder.setDaemon(true);
+                actual.holder.start();
+            } else current.setTime(time);
+            return currentVal;
+        }
     }
 
     @Override

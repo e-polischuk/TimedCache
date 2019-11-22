@@ -14,22 +14,26 @@ public class CacheCleaner<K, V> extends CacheAbstract<K, V> {
         super(user, store, value, time);
     }
 
-    public synchronized static CacheCleaner get(Class user) {
+    public synchronized static CacheCleaner of(Class user) {
         return CLEANED.computeIfAbsent(user, u -> new CacheCleaner<>(u, new ConcurrentHashMap<>(), null));
     }
 
     @Override
-    public synchronized V of(K key, int time, Function<K, V> getUpdatedValue) {
-        if (time < 1) return getUpdatedValue.apply(key);
-        CacheCleaner<K, V> current = (CacheCleaner<K, V>) store.get(key);
-        V currentVal = current == null ? null : current.getValue();
-        if (currentVal == null) {
-            currentVal = getUpdatedValue.apply(key);
-            store.put(key, new CacheCleaner<>(user, store, currentVal, time));
-            this.setTime(getMinTimeOf(store));
-            this.setCleaner();
-        } else current.setTime(time);
-        return currentVal;
+    public synchronized V get(K key, int time, Function<K, V> getUpdatedValue) {
+        if (time < 1) {
+            store.remove(key);
+            return getUpdatedValue.apply(key);
+        } else {
+            CacheCleaner<K, V> current = (CacheCleaner<K, V>) store.get(key);
+            V currentVal = current == null ? null : current.getValue();
+            if (currentVal == null) {
+                currentVal = getUpdatedValue.apply(key);
+                store.put(key, new CacheCleaner<>(user, store, currentVal, time));
+                this.setTime(getMinTimeOf(store));
+                this.setCleaner();
+            } else current.setTime(time);
+            return currentVal;
+        }
     }
 
     @Override

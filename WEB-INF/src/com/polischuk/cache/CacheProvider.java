@@ -30,13 +30,13 @@ public class CacheProvider {
         return isCacheHolder;
     }
 
-    public static LocalDateTime of(Integer key, Function<Integer, LocalDateTime> getUpdatedValue) {
+    public static LocalDateTime of(int key, Function<Integer, LocalDateTime> getUpdatedValue) {
         Class<? extends Cache> required = isCacheHolder ? CacheHolder.class : CacheCleaner.class;
         if (cache == null || cache.getClass() !=  required) {
             if (cache != null) cache.stopCache();
-            cache = isCacheHolder ? CacheHolder.get(CacheProvider.class) : CacheCleaner.get(CacheProvider.class);
+            cache = isCacheHolder ? CacheHolder.of(CacheProvider.class) : CacheCleaner.of(CacheProvider.class);
         }
-        return cache.of(key, cacheTime, getUpdatedValue);
+        return cache.get(key, cacheTime, getUpdatedValue);
     }
 
 }
